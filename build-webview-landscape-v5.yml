@@ -1,0 +1,58 @@
+name: Build DSI WebView Landscape v0.5
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          packages: 'platforms;android-35 build-tools;35.0.0'
+
+      - name: Unpack landscape source
+        run: |
+          mkdir -p project
+          unzip -q DSI-WebView-Landscape-v0.5-source.zip -d project
+          SOURCE_DIR="$(find project -mindepth 1 -maxdepth 1 -type d -print -quit)"
+          test -n "$SOURCE_DIR"
+          test -f "$SOURCE_DIR/settings.gradle"
+          test -f "$SOURCE_DIR/app/build.gradle"
+          echo "SOURCE_DIR=$SOURCE_DIR" >> "$GITHUB_ENV"
+
+      - name: Set up Gradle 8.9
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: '8.9'
+          cache-provider: basic
+
+      - name: Build debug APK
+        run: gradle --no-daemon --stacktrace -p "$SOURCE_DIR" assembleDebug
+
+      - name: Check APK
+        run: |
+          test -f "$SOURCE_DIR/app/build/outputs/apk/debug/app-debug.apk"
+          ls -lh "$SOURCE_DIR/app/build/outputs/apk/debug/app-debug.apk"
+
+      - name: Upload landscape APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: DSI-WebView-Landscape-v0.5
+          path: project/**/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 30
