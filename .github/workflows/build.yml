@@ -1,7 +1,9 @@
-name: Build DSI WebView Test APK
+name: Build DSI WebView Diagnostic v4
 
 on:
   push:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -12,32 +14,42 @@ jobs:
     runs-on: ubuntu-24.04
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out repository
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-java@v4
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - uses: android-actions/setup-android@v4
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
         with:
           packages: 'platforms;android-35 build-tools;35.0.0'
 
-      - uses: gradle/actions/setup-gradle@v6
+      - name: Unpack v4 source
+        run: |
+          mkdir -p project
+          unzip -q DSI-WebView-Test-diagnostic-v4.zip -d project
+          test -f project/settings.gradle
+          test -f project/app/build.gradle
+          test -f project/app/src/main/AndroidManifest.xml
+
+      - name: Set up Gradle 8.9
+        uses: gradle/actions/setup-gradle@v6
         with:
           gradle-version: '8.9'
           cache-provider: basic
 
-      - name: 解压 v3 源码
-        run: |
-          mkdir project
-          unzip -q DSI-WebView-Test-diagnostic-v4.zip -d project
-
-      - name: 构建 APK
+      - name: Build release APK
         working-directory: project
         run: gradle --no-daemon --stacktrace assembleRelease
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload v4 APK
+        uses: actions/upload-artifact@v4
         with:
-          name: dsi-webview-test-v3
+          name: dsi-webview-test-v4
           path: project/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+          retention-days: 30
