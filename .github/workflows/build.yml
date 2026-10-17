@@ -1,4 +1,4 @@
-name: Build DSI WebView Codex Shell v0.11
+name: Build DSI WebView Login Test v0.13
 
 on:
   workflow_dispatch:
@@ -9,10 +9,37 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-24.04
-
     steps:
-      - name: Check out repository
+      - name: Check out source
         uses: actions/checkout@v4
+
+      - name: Expand login-test ZIP when present
+        shell: bash
+        run: |
+          set -e
+          archive=""
+          for candidate in \
+            DSI-WebView-Login-Test-v0.13-source*.zip \
+            output/DSI-WebView-Login-Test-v0.13-source*.zip; do
+            if [ -f "$candidate" ]; then
+              archive="$candidate"
+              break
+            fi
+          done
+          if [ -n "$archive" ]; then
+            mkdir -p .dsi-login-source
+            unzip -q -o "$archive" -d .dsi-login-source
+            project_root="$(find .dsi-login-source -type f -name settings.gradle -printf '%h\n' | head -n 1)"
+            if [ -z "$project_root" ]; then
+              echo "The ZIP does not contain an Android Gradle project"
+              exit 1
+            fi
+            cp -a "$project_root"/. .
+          fi
+          test -f settings.gradle
+          test -f app/build.gradle
+          test -f app/src/main/AndroidManifest.xml
+          test -f app/src/main/java/com/dsi/webviewtest/MainActivity.java
 
       - name: Set up Java 17
         uses: actions/setup-java@v4
@@ -25,49 +52,31 @@ jobs:
         with:
           packages: 'platforms;android-35 build-tools;35.0.0'
 
-      - name: Unpack Codex shell source
-        run: |
-          mkdir -p project
-          unzip -q DSI-WebView-Codex-Shell-v0.11-source.zip -d project
-          SOURCE_DIR="$(find project -mindepth 1 -maxdepth 1 -type d -print -quit)"
-          test -n "$SOURCE_DIR"
-          test -f "$SOURCE_DIR/settings.gradle"
-          test -f "$SOURCE_DIR/app/build.gradle"
-          echo "SOURCE_DIR=$SOURCE_DIR" >> "$GITHUB_ENV"
-
       - name: Set up Gradle 8.9
         uses: gradle/actions/setup-gradle@v6
         with:
           gradle-version: '8.9'
           cache-provider: basic
 
-      - name: Build debug APK with dependency retry
+      - name: Build debug APK with retry
         shell: bash
         run: |
-          set +e
+          set -o pipefail
           for attempt in 1 2 3; do
-            echo "Gradle build attempt ${attempt}/3"
-            gradle --no-daemon --stacktrace --console=plain -p "$SOURCE_DIR" assembleDebug
-            status=$?
-            if [ "$status" -eq 0 ]; then
+            if gradle --no-daemon --stacktrace assembleDebug; then
               exit 0
             fi
             if [ "$attempt" -lt 3 ]; then
-              echo "Gradle failed; waiting 20 seconds before retry"
+              echo "Gradle attempt $attempt failed; retrying after 20 seconds"
               sleep 20
             fi
           done
           exit 1
 
-      - name: Check APK
-        run: |
-          test -f "$SOURCE_DIR/app/build/outputs/apk/debug/app-debug.apk"
-          ls -lh "$SOURCE_DIR/app/build/outputs/apk/debug/app-debug.apk"
-
-      - name: Upload Codex shell APK
+      - name: Upload login-test APK
         uses: actions/upload-artifact@v4
         with:
-          name: DSI-WebView-Codex-Shell-v0.11
-          path: project/**/app/build/outputs/apk/debug/app-debug.apk
+          name: DSI-WebView-Login-Test-v0.13
+          path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
