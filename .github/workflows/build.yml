@@ -1,4 +1,4 @@
-name: Build DSI WebView Landscape v0.5
+name: Build DSI WebView Desktop v0.6
 
 on:
   workflow_dispatch:
@@ -25,10 +25,10 @@ jobs:
         with:
           packages: 'platforms;android-35 build-tools;35.0.0'
 
-      - name: Unpack landscape source
+      - name: Unpack desktop-layout source
         run: |
           mkdir -p project
-          unzip -q DSI-WebView-Landscape-v0.5-source.zip -d project
+          unzip -q DSI-WebView-Desktop-v0.6-source.zip -d project
           SOURCE_DIR="$(find project -mindepth 1 -maxdepth 1 -type d -print -quit)"
           test -n "$SOURCE_DIR"
           test -f "$SOURCE_DIR/settings.gradle"
@@ -49,10 +49,10 @@ jobs:
           test -f "$SOURCE_DIR/app/build/outputs/apk/debug/app-debug.apk"
           ls -lh "$SOURCE_DIR/app/build/outputs/apk/debug/app-debug.apk"
 
-      - name: Upload landscape APK
+      - name: Upload desktop-layout APK
         uses: actions/upload-artifact@v4
         with:
-          name: DSI-WebView-Landscape-v0.5
+          name: DSI-WebView-Desktop-v0.6
           path: project/**/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
