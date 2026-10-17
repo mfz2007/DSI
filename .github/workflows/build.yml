@@ -31,7 +31,7 @@ jobs:
       - name: 解压 v3 源码
         run: |
           mkdir project
-          unzip -q DSI-WebView-Test-source-v3.zip -d project
+          unzip -q DSI-WebView-Test-diagnostic-v4.zip -d project
 
       - name: 构建 APK
         working-directory: project
