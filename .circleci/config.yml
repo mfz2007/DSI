@@ -8,15 +8,27 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Inspect build resources
+          name: Chromium build environment check
           command: |
             echo "=== CPU ==="
             nproc
+            cat /sys/fs/cgroup/cpu.max 2>/dev/null || true
+
             echo "=== Memory ==="
             free -h
+            cat /sys/fs/cgroup/memory.max 2>/dev/null || true
+
             echo "=== Disk ==="
-            df -h
-            echo "Environment check complete."
+            df -h /
+            df -i /
+
+            echo "=== Limits ==="
+            ulimit -a
+
+            echo "=== System ==="
+            uname -a
+
+            echo "=== Finished ==="
 
 workflows:
   environment-check:
