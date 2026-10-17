@@ -1,4 +1,4 @@
-name: Build DSI WebView Codex Layout v0.8
+name: Build DSI WebView Codex Layout v0.9
 
 on:
   workflow_dispatch:
@@ -25,10 +25,10 @@ jobs:
         with:
           packages: 'platforms;android-35 build-tools;35.0.0'
 
-      - name: Unpack Codex-layout source
+      - name: Unpack visible-composer source
         run: |
           mkdir -p project
-          unzip -q DSI-WebView-Codex-v0.8-source.zip -d project
+          unzip -q DSI-WebView-Codex-v0.9-source.zip -d project
           SOURCE_DIR="$(find project -mindepth 1 -maxdepth 1 -type d -print -quit)"
           test -n "$SOURCE_DIR"
           test -f "$SOURCE_DIR/settings.gradle"
@@ -52,7 +52,7 @@ jobs:
       - name: Upload Codex-layout APK
         uses: actions/upload-artifact@v4
         with:
-          name: DSI-WebView-Codex-v0.8
+          name: DSI-WebView-Codex-v0.9
           path: project/**/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
