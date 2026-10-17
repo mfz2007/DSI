@@ -1,4 +1,4 @@
-name: Build DSI WebView Login Test v0.13
+name: Build DSI Desktop UI v0.14
 
 on:
   workflow_dispatch:
@@ -13,23 +13,23 @@ jobs:
       - name: Check out source
         uses: actions/checkout@v4
 
-      - name: Expand login-test ZIP when present
+      - name: Expand desktop UI ZIP when present
         shell: bash
         run: |
           set -e
           archive=""
           for candidate in \
-            DSI-WebView-Login-Test-v0.13-source*.zip \
-            output/DSI-WebView-Login-Test-v0.13-source*.zip; do
+            DSI-Desktop-UI-v0.14-source*.zip \
+            output/DSI-Desktop-UI-v0.14-source*.zip; do
             if [ -f "$candidate" ]; then
               archive="$candidate"
               break
             fi
           done
           if [ -n "$archive" ]; then
-            mkdir -p .dsi-login-source
-            unzip -q -o "$archive" -d .dsi-login-source
-            project_root="$(find .dsi-login-source -type f -name settings.gradle -printf '%h\n' | head -n 1)"
+            mkdir -p .dsi-desktop-source
+            unzip -q -o "$archive" -d .dsi-desktop-source
+            project_root="$(find .dsi-desktop-source -type f -name settings.gradle -printf '%h\n' | head -n 1)"
             if [ -z "$project_root" ]; then
               echo "The ZIP does not contain an Android Gradle project"
               exit 1
@@ -73,10 +73,10 @@ jobs:
           done
           exit 1
 
-      - name: Upload login-test APK
+      - name: Upload desktop UI APK
         uses: actions/upload-artifact@v4
         with:
-          name: DSI-WebView-Login-Test-v0.13
+          name: DSI-Desktop-UI-v0.14
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
