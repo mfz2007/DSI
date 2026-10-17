@@ -1,4 +1,4 @@
-name: Build DSI WebView Native Codex Shell v0.10
+name: Build DSI WebView Codex Shell v0.11
 
 on:
   workflow_dispatch:
@@ -25,10 +25,10 @@ jobs:
         with:
           packages: 'platforms;android-35 build-tools;35.0.0'
 
-      - name: Unpack native-shell source
+      - name: Unpack Codex shell source
         run: |
           mkdir -p project
-          unzip -q DSI-WebView-Native-Shell-v0.10-source.zip -d project
+          unzip -q DSI-WebView-Codex-Shell-v0.11-source.zip -d project
           SOURCE_DIR="$(find project -mindepth 1 -maxdepth 1 -type d -print -quit)"
           test -n "$SOURCE_DIR"
           test -f "$SOURCE_DIR/settings.gradle"
@@ -41,18 +41,33 @@ jobs:
           gradle-version: '8.9'
           cache-provider: basic
 
-      - name: Build debug APK
-        run: gradle --no-daemon --stacktrace -p "$SOURCE_DIR" assembleDebug
+      - name: Build debug APK with dependency retry
+        shell: bash
+        run: |
+          set +e
+          for attempt in 1 2 3; do
+            echo "Gradle build attempt ${attempt}/3"
+            gradle --no-daemon --stacktrace --console=plain -p "$SOURCE_DIR" assembleDebug
+            status=$?
+            if [ "$status" -eq 0 ]; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "Gradle failed; waiting 20 seconds before retry"
+              sleep 20
+            fi
+          done
+          exit 1
 
       - name: Check APK
         run: |
           test -f "$SOURCE_DIR/app/build/outputs/apk/debug/app-debug.apk"
           ls -lh "$SOURCE_DIR/app/build/outputs/apk/debug/app-debug.apk"
 
-      - name: Upload native-shell APK
+      - name: Upload Codex shell APK
         uses: actions/upload-artifact@v4
         with:
-          name: DSI-WebView-Native-Shell-v0.10
+          name: DSI-WebView-Codex-Shell-v0.11
           path: project/**/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
