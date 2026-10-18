@@ -1,4 +1,4 @@
-name: Build DSI Desktop UI v0.14
+name: Build DSI Test APK
 
 on:
   workflow_dispatch:
@@ -9,33 +9,49 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-24.04
+
     steps:
-      - name: Check out source
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Expand desktop UI ZIP when present
+      - name: Find and expand DSI source ZIP
         shell: bash
         run: |
           set -e
+
           archive=""
+
           for candidate in \
-            DSI-Desktop-UI-v0.14-source*.zip \
-            output/DSI-Desktop-UI-v0.14-source*.zip; do
+            DSI-v0.14-dsi-avatar-test-source.zip \
+            DSI-Desktop-UI-v0.14-source.zip \
+            *source.zip \
+            output/*source.zip
+          do
             if [ -f "$candidate" ]; then
               archive="$candidate"
               break
             fi
           done
-          if [ -n "$archive" ]; then
-            mkdir -p .dsi-desktop-source
-            unzip -q -o "$archive" -d .dsi-desktop-source
-            project_root="$(find .dsi-desktop-source -type f -name settings.gradle -printf '%h\n' | head -n 1)"
-            if [ -z "$project_root" ]; then
-              echo "The ZIP does not contain an Android Gradle project"
-              exit 1
-            fi
-            cp -a "$project_root"/. .
+
+          if [ -z "$archive" ]; then
+            echo "No DSI source ZIP found"
+            exit 1
           fi
+
+          echo "Using source archive: $archive"
+
+          mkdir -p .dsi-source
+          unzip -q -o "$archive" -d .dsi-source
+
+          project_root="$(find .dsi-source -type f -name settings.gradle -printf '%h\n' | head -n 1)"
+
+          if [ -z "$project_root" ]; then
+            echo "Android Gradle project not found in ZIP"
+            exit 1
+          fi
+
+          cp -a "$project_root"/. .
+
           test -f settings.gradle
           test -f app/build.gradle
           test -f app/src/main/AndroidManifest.xml
@@ -45,38 +61,14 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: "17"
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
         with:
-          packages: 'platforms;android-35 build-tools;35.0.0'
+          packages: |
+            platforms;android-35
+            build-tools;35.0.0
+            platform-tools
 
-      - name: Set up Gradle 8.9
-        uses: gradle/actions/setup-gradle@v6
-        with:
-          gradle-version: '8.9'
-          cache-provider: basic
-
-      - name: Build debug APK with retry
-        shell: bash
-        run: |
-          set -o pipefail
-          for attempt in 1 2 3; do
-            if gradle --no-daemon --stacktrace assembleDebug; then
-              exit 0
-            fi
-            if [ "$attempt" -lt 3 ]; then
-              echo "Gradle attempt $attempt failed; retrying after 20 seconds"
-              sleep 20
-            fi
-          done
-          exit 1
-
-      - name: Upload desktop UI APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: DSI-Desktop-UI-v0.14
-          path: app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
-          retention-days: 30
+      - name: Set up
