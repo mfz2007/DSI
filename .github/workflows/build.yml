@@ -14,31 +14,21 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Find and expand DSI source ZIP
+      - name: Expand DSI source
         shell: bash
         run: |
           set -e
 
           archive=""
 
-          for candidate in \
-            DSI-v0.14-dsi-avatar-test-source.zip \
-            DSI-Desktop-UI-v0.14-source.zip \
-            *source.zip \
-            output/*source.zip
-          do
-            if [ -f "$candidate" ]; then
-              archive="$candidate"
-              break
-            fi
-          done
-
-          if [ -z "$archive" ]; then
-            echo "No DSI source ZIP found"
+          if [ -f "DSI-v0.14-dsi-avatar-test-source.zip" ]; then
+            archive="DSI-v0.14-dsi-avatar-test-source.zip"
+          elif [ -f "DSI-Desktop-UI-v0.14-source.zip" ]; then
+            archive="DSI-Desktop-UI-v0.14-source.zip"
+          else
+            echo "Source ZIP not found"
             exit 1
           fi
-
-          echo "Using source archive: $archive"
 
           mkdir -p .dsi-source
           unzip -q -o "$archive" -d .dsi-source
@@ -46,7 +36,7 @@ jobs:
           project_root="$(find .dsi-source -type f -name settings.gradle -printf '%h\n' | head -n 1)"
 
           if [ -z "$project_root" ]; then
-            echo "Android Gradle project not found in ZIP"
+            echo "Android project not found"
             exit 1
           fi
 
@@ -57,7 +47,7 @@ jobs:
           test -f app/src/main/AndroidManifest.xml
           test -f app/src/main/java/com/dsi/webviewtest/MainActivity.java
 
-      - name: Set up Java 17
+      - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -65,10 +55,23 @@ jobs:
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
-        with:
-          packages: |
-            platforms;android-35
-            build-tools;35.0.0
-            platform-tools
 
-      - name: Set up
+      - name: Install Android packages
+        run: |
+          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: "8.9"
+
+      - name: Build APK
+        run: gradle --no-daemon assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: DSI-v0.14-test-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 30
